@@ -1,9 +1,9 @@
 extern crate hyper;
-extern crate multipart;
+extern crate qiniu_multipart;
 
 use hyper::Client;
 
-use multipart::client::lazy::Multipart;
+use qiniu_multipart::client::lazy::Multipart;
 
 fn main() {
     let mut binary = "Hello world in binary!".as_bytes();

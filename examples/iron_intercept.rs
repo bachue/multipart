@@ -1,20 +1,20 @@
 extern crate iron;
-extern crate multipart;
+extern crate qiniu_multipart;
 
 use iron::prelude::*;
 
-use multipart::server::Entries;
-use multipart::server::iron::Intercept;
+use qiniu_multipart::server::iron::Intercept;
+use qiniu_multipart::server::Entries;
 
 fn main() {
     // We start with a basic request handler chain.
-    let mut chain = Chain::new(|req: &mut Request|
+    let mut chain = Chain::new(|req: &mut Request| {
         if let Some(entries) = req.extensions.get::<Entries>() {
             Ok(Response::with(format!("{:?}", entries)))
         } else {
             Ok(Response::with("Not a multipart request"))
         }
-    );
+    });
 
     // `Intercept` will read out the entries and place them as an extension in the request.
     // It has various builder-style methods for changing how it will behave, but has sane settings
