@@ -412,6 +412,7 @@ fn test_client_lazy(test_fields: &TestFields) -> HttpBuffer {
                 Cursor::new(&file.data.0),
                 file.filename(),
                 Some(file.content_type.clone()),
+                None,
             );
         }
 
@@ -424,6 +425,7 @@ fn test_client_lazy(test_fields: &TestFields) -> HttpBuffer {
             Cursor::new(&file.data.0),
             file.filename(),
             Some(file.content_type.clone()),
+            None,
         );
     }
 

@@ -173,6 +173,7 @@ impl<'n, 'd> Multipart<'n, 'd> {
         stream: R,
         filename: Option<F>,
         mime: Option<Mime>,
+        content_range: Option<F>,
     ) -> &mut Self
     where
         N: Into<Cow<'n, str>>,
@@ -183,6 +184,7 @@ impl<'n, 'd> Multipart<'n, 'd> {
             name: name.into(),
             data: Data::Stream(Stream {
                 content_type: mime.unwrap_or(mime::APPLICATION_OCTET_STREAM),
+                content_range: content_range.map(|r| r.into()),
                 filename: filename.map(|f| f.into()),
                 stream: Box::new(stream),
             }),
@@ -245,6 +247,7 @@ impl<'n, 'd> fmt::Debug for Data<'n, 'd> {
 struct Stream<'n, 'd> {
     filename: Option<Cow<'n, str>>,
     content_type: Mime,
+    content_range: Option<Cow<'n, str>>,
     stream: Box<dyn Read + 'd>,
 }
 
@@ -298,6 +301,7 @@ impl<'d> PreparedFields<'d> {
                         &field.name,
                         &boundary,
                         &stream.content_type,
+                        stream.content_range.as_ref().map(|r| r.as_ref()),
                         stream.filename.as_ref().map(|f| &**f),
                         stream.stream,
                     ));
@@ -384,7 +388,14 @@ impl<'d> PreparedField<'d> {
         let file = try_lazy!(name, File::open(path));
         let content_len = try_lazy!(name, file.metadata()).len();
 
-        let stream = Self::from_stream(&name, boundary, &content_type, filename, Box::new(file));
+        let stream = Self::from_stream(
+            &name,
+            boundary,
+            &content_type,
+            None,
+            filename,
+            Box::new(file),
+        );
 
         let content_len = content_len + (stream.header.get_ref().len() as u64);
 
@@ -395,6 +406,7 @@ impl<'d> PreparedField<'d> {
         name: &str,
         boundary: &str,
         content_type: &Mime,
+        content_range: Option<&str>,
         filename: Option<&str>,
         stream: Box<dyn Read + 'd>,
     ) -> Self {
@@ -411,7 +423,12 @@ impl<'d> PreparedField<'d> {
             write!(header, "; filename=\"{}\"", filename).unwrap();
         }
 
-        write!(header, "\r\nContent-Type: {}\r\n\r\n", content_type).unwrap();
+        write!(header, "\r\n").unwrap();
+        write!(header, "Content-Type: {}\r\n", content_type).unwrap();
+        if let Some(content_range) = content_range {
+            write!(header, "Content-Range: {}\r\n", content_range).unwrap();
+        }
+        write!(header, "\r\n").unwrap();
 
         PreparedField {
             header: Cursor::new(header),
